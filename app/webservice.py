@@ -18,12 +18,11 @@ class Balance(Resource):
         if userphone.isdigit() and len(userphone) == 11:
             data = wallets.find_one({"userphone": userphone})
             if data:
-                print(f"'balance': {data['balance']}")
-                return {"balance": data["balance"]} 
+                return {"Status": True, "message": "Balance successfully retrieved", "data": data.get("balance")}, 200
             else:
-                return None
+                return {"status": False, "message": "User does not exist in database","data": None}, 400
         else:
-            return None
+            return {"status": False, "message": "invalid phone number", "data": None}, 400
 api.add_resource(Balance, "/balance/<string:userphone>")
 
 class Credit(Resource):
@@ -37,15 +36,15 @@ class Credit(Resource):
                         old_balance = get_balance(userphone)
                         new_balance = old_balance + amount
                         wallets.update_one({"userphone": userphone}, {"$set": {"balance": new_balance}})
-                        
+                        return {"status": True, "message":"User's wallet has been successfully credited", "data": None}, 200
                     else:
-                        return None
+                        return {"status": False, "message": "User does not exist in database", "data": None}, 400
                 else:
-                    return None
+                    return {"status": False, "message":"amount is less than 0", "data": None}, 400
             else:
-                return None
+                return {"status": False, "message":"invalid amount", "data": None}, 400
         else:
-            return None
+            return {"status": False, "message":"invalid phone number", "data": None}, 400
 api.add_resource(Credit, "/credit/<string:userphone>/<string:amount>")
 
 class Debit(Resource):
@@ -59,14 +58,15 @@ class Debit(Resource):
                         if old_balance - amount > 100.00:
                             new_balance = old_balance - amount
                             wallets.update_one({"userphone": userphone}, {"$set": {"balance": new_balance}})
+                            return {"status": True, "message":"User's wallet has been credired successfully", "data": None}, 200
                         else:
-                            return None
+                            return {"status": False, "message":"User's balance is too low to be debited", "data": None}, 400
                     else:
-                        return None
+                        return {"status": False, "message":"User does not exist in database", "data": None}, 400
                 else:
-                    return None
+                    return {"status": False, "message":"amount is less than 0", "data": None}, 400
             else:
-                return None
+                return {"status": False, "message":"invalid amount", "data": None}, 400
         else:
-            return None
+            return {"status": False, "message":"invalid phone number", "data": None}, 400
 api.add_resource(Debit, "/credit/<string:userphone>/<string:amount>")
