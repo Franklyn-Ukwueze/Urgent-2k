@@ -22,6 +22,7 @@ CORS(app)
 client = MongoClient(os.getenv("MONGO_URI"))
 db = client.urgent2k
 wallets = db.wallets
+voucherdb = db.vouchers
 
 # Import the application webservice
 from app import webservice, error
