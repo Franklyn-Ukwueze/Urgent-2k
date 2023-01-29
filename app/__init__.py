@@ -4,6 +4,11 @@ from flask_restful import Resource, Api
 from flask_cors import CORS
 from pymongo import MongoClient
 from config import Config, MONGO_URI
+from dotenv import load_dotenv
+
+basedir = os.path.abspath(os.path.dirname(__file__))
+load_dotenv(os.path.join(basedir, '.env'))
+
 
 
 # from flask_pymongo import PyMongo
@@ -25,4 +30,4 @@ wallets = db.wallets
 voucherdb = db.vouchers
 
 # Import the application webservice
-from app import webservice, error
+from app import webservice, error, helpers
