@@ -172,8 +172,27 @@ def cash_voucher(userphone, token):
         else:
                 print("invalid token.")
     else:
-        print("invalid userphone.")        
+        print("invalid userphone.") 
 
+def create(userphone, amount):
+    headers = {'content-type': 'application/json', 'x-access-token':'2K!@IDL_8@W!7198hU8G6l7Q18c0vXc!Ap'}
+    payload = {'amount': amount}
+    url = f"https://urgent-twok.onrender.com/createvoucher/{userphone}"
+
+    try:
+        #Make API call
+        r = requests.post(url=url, json=payload, headers=headers)
+        print(f"Status code: {r.status_code}")  #Print status code
+        response = r.json()
+    except Exception as e:
+        return f"Encountered error: {e}"
+
+    # if not response.get("status"):
+    #     return response.get("message")
+
+    return response
+
+print(create("09015889838", "50"))
 #print(get_balance("09015889838"))
 #print(voucherdb.find_one({"token": "908891780559"})["status"])
 #create_voucher("09015889838", "50")
