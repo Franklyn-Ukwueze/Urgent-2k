@@ -3,6 +3,8 @@ import random
 import requests
 #from app import wallets, voucherdb
 from pymongo import MongoClient
+from functools import wraps
+from flask import request
 
 
 client = MongoClient(os.getenv("MONGO_URI"))
@@ -10,11 +12,31 @@ db = client.urgent2k
 wallets = db.wallets
 voucherdb = db.vouchers
 
-urgent2k_token = os.getenv("URGENT_2K_KEY")
+urgent2k_token = os.environ.get("URGENT_2K_KEY")
 base_url = os.getenv("SAFEPAY_URL")
 
+# decorator function frequesting api key as header
+def urgent2k_token_required(f):
+    @wraps(f)
+    # the new, post-decoration function. Note *args and **kwargs here.
+    def decorated(*args, **kwargs):
+        token = None
+
+        if 'x-access-token' in request.headers:
+            token = request.headers['x-access-token']
+        
+        if not token:
+            return {"status": False, "message": "Access token is missing at " + request.url, "data": None}, 401
+
+        if token == urgent2k_token:
+            return f(*args, **kwargs)
+        else:
+            return {"status": False, "message": "Invalid access token at " + request.url, "data": None}, 401
+
+    return decorated
+
 def get_balance(userphone):
-    # if userphone.isdigit() and len(userphone) == 11:
+    if userphone.isdigit() and len(userphone) == 11:
     #     data = wallets.find_one({"userphone": userphone})
     #     if data:
     #         return data["balance"]
@@ -22,22 +44,24 @@ def get_balance(userphone):
     #         return None
     # else:
     #     return None
-    headers = {'content-type': 'application/json', 'x-access-token': f"{urgent2k_token}"}
-    url = f"https://safe-payy.herokuapp.com/api/v1/urgent2k/usertransaction/balance/{userphone}"
+        headers = {'content-type':'application/json', 'x-access-token':f'{urgent2k_token}'}
+        url = f"{base_url}/api/v1/urgent2k/usertransaction/balance/{userphone}"
 
-    try:
-        #Make API call
-        r = requests.get(url=url, headers=headers)
-        print(f"Status code: {r.status_code}")  #Print status code
-        response = r.json()
-    except Exception as e:
-        return f"Encountered error: {e}"
+        try:
+            #Make API call
+            r = requests.get(url=url, headers=headers)
+            print(f"Status code: {r.status_code}")  #Print status code
+            response = r.json()
+        except Exception as e:
+            return f"Encountered error: {e}"
 
-    if not response.get("status"):
-        return response.get("message")
+        if not response.get("status"):
+            return response.get("message")
 
-    data = response.get("data") 
-    return data.get("available_balance")
+        data = response.get("data") 
+        return data.get("available_balance")
+    else:
+        return "invalid phone number."
 
 
 def credit(userphone, amount, token):
@@ -54,13 +78,13 @@ def credit(userphone, amount, token):
             #         return None
             # else:
             #     return None
-            headers = {'content-type': 'application/json', 'x-access-token': f"{urgent2k_token}"}
-            data = {'amount': amount, 'desc': f'Credit!Claim of NGN{amount} gift voucher.VOUCHER:{token}'}
-            url = f"https://safe-payy.herokuapp.com/api/v1/urgent2k/usertransaction/credit/{userphone}"
+            headers = {'content-type': 'application/json', 'x-access-token':f'{urgent2k_token}'}
+            payload = {'amount': amount, 'desc': f'Credit!Claim of NGN{amount} gift voucher.VOUCHER:{token}'}
+            url = f"{base_url}/api/v1/urgent2k/usertransaction/credit/{userphone}"
 
             try:
                 #Make API call
-                r = requests.post(url=url, data=data, headers=headers)
+                r = requests.post(url=url, json=payload, headers=headers)
                 print(f"Status code: {r.status_code}")  #Print status code
                 response = r.json()
             except Exception as e:
@@ -71,9 +95,9 @@ def credit(userphone, amount, token):
 
             return response
         else:
-            return None
+            return "amount isn't a digit"
     else:
-        return None
+        return "invalid phone number."
 
 def debit(userphone, amount, token):
     if userphone.isdigit() and len(userphone) == 11:
@@ -89,13 +113,13 @@ def debit(userphone, amount, token):
                 #         return None
                 # else:
                 #     return None
-                headers = {'content-type': 'application/json', 'x-access-token': f"{urgent2k_token}"}
-                data = {'amount': amount, 'desc': f'Debit!Generation of NGN{amount} gift voucher.VOUCHER:{token}'}
-                url = f"https://safe-payy.herokuapp.com/api/v1/urgent2k/usertransaction/debit/{userphone}"
+                headers = {'content-type': 'application/json', 'x-access-token': f'{urgent2k_token}'}
+                payload = {'amount': amount, 'desc': f'Debit!Generation of NGN{amount} gift voucher.VOUCHER:{token}'}
+                url = f"{base_url}/api/v1/urgent2k/usertransaction/debit/{userphone}"
 
                 try:
                     #Make API call
-                    r = requests.post(url=url, data=data, headers=headers)
+                    r = requests.post(url=url, json=payload, headers=headers)
                     print(f"Status code: {r.status_code}")  #Print status code
                     response = r.json()
                 except Exception as e:
@@ -107,11 +131,11 @@ def debit(userphone, amount, token):
                 return response
 
             else:
-                return None
+                return "invalid amount"
         else:
-            return None
+            return "amount isn't a digit"
     else:
-        return None
+        return "invalid userphone"
 
 def create_voucher(userphone, amount):
     if userphone.isdigit() and len(userphone) == 11:
@@ -150,12 +174,11 @@ def cash_voucher(userphone, token):
     else:
         print("invalid userphone.")        
 
-
-#print(get_balance("08034335775"))
+#print(get_balance("09015889838"))
 #print(voucherdb.find_one({"token": "908891780559"})["status"])
 #create_voucher("09015889838", "50")
 #cash_voucher("07018168824", "908891780559")
 #wallets.insert_one({"userphone": "07018168824", "balance": 100.00})
-print(credit("07018168824", "50","908891780559" ))
-#debit("0701868824", "3000")
+#print(credit("08034335775", "50","908891780559" ))
+#print(debit("08034335775", "50","908891780559"))
 #print(get_balance("07018l68824"))       
