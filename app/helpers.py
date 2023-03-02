@@ -66,7 +66,7 @@ def get_balance(userphone):
     # else:
     #     return None
         headers = {'content-type':'application/json', 'x-access-token':f'{urgent2k_token}'}
-        url = f"https://safe-payy.herokuapp.com/api/v1/urgent2k/usertransaction/balance/{userphone}"
+        url = f"{base_url}/api/v1/urgent2k/usertransaction/balance/{userphone}"
 
         try:
             #Make API call
@@ -314,4 +314,4 @@ def get_txn_history(userphone, count=None):
 #print(debit("08034335775", "50","908891780559"))
 #print(get_outflow("08034335775")) 
 #print(get_inflow("08034335775")) 
-print(get_txn_history("08034335775", 5))     
+#print(get_txn_history("08034335775", 5))     
