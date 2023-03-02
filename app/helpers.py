@@ -35,6 +35,27 @@ def urgent2k_token_required(f):
 
     return decorated
 
+def get_txn(userphone):
+    if userphone.isdigit() and len(userphone) == 11:
+        headers = {'content-type':'application/json', 'x-access-token':f'{urgent2k_token}'}
+        url = f"https://safe-payy.herokuapp.com/api/v1/urgent2k/usertransaction/retrieve/{userphone}"
+
+        try:
+            #Make API call
+            r = requests.get(url=url, headers=headers)
+            print(f"Status code: {r.status_code}")  #Print status code
+            response = r.json()
+        except Exception as e:
+            return f"Encountered error: {e}"
+
+        if not response.get("status"):
+            return response.get("message")
+
+        data = response.get("data") 
+        return data
+    else:
+        return "invalid phone number."
+
 def get_balance(userphone):
     if userphone.isdigit() and len(userphone) == 11:
     #     data = wallets.find_one({"userphone": userphone})
@@ -45,7 +66,7 @@ def get_balance(userphone):
     # else:
     #     return None
         headers = {'content-type':'application/json', 'x-access-token':f'{urgent2k_token}'}
-        url = f"{base_url}/api/v1/urgent2k/usertransaction/balance/{userphone}"
+        url = f"https://safe-payy.herokuapp.com/api/v1/urgent2k/usertransaction/balance/{userphone}"
 
         try:
             #Make API call
@@ -192,12 +213,105 @@ def create(userphone, amount):
 
     return response
 
-print(create("09015889838", "50"))
-#print(get_balance("09015889838"))
+def get_inflow(userphone):
+    if userphone.isdigit() and len(userphone) == 11:
+        headers = {'content-type':'application/json', 'x-access-token':f'{urgent2k_token}'}
+        url = f"{base_url}/api/v1/urgent2k/usertransaction/retrieve/{userphone}"
+
+        try:
+            #Make API call
+            r = requests.get(url=url, headers=headers)
+            print(f"Status code: {r.status_code}")  #Print status code
+            response = r.json()
+        except Exception as e:
+            return f"Encountered error: {e}"
+
+        if not response.get("status"):
+            return response.get("message")
+
+        data = response.get("data") 
+        
+        total = 0
+        for txn in data.get("transactions"):
+            if txn.get("alert") == "Credit":
+                total = total + float(txn.get("amount")[3:])
+            else:
+                continue
+        return total
+    else:
+        return "invalid phone number."
+    
+def get_outflow(userphone):
+    if userphone.isdigit() and len(userphone) == 11:
+        headers = {'content-type':'application/json', 'x-access-token':f'{urgent2k_token}'}
+        url = f"{base_url}/api/v1/urgent2k/usertransaction/retrieve/{userphone}"
+
+        try:
+            #Make API call
+            r = requests.get(url=url, headers=headers)
+            print(f"Status code: {r.status_code}")  #Print status code
+            response = r.json()
+        except Exception as e:
+            return f"Encountered error: {e}"
+
+        if not response.get("status"):
+            return response.get("message")
+
+        data = response.get("data") 
+        
+        total = 0
+        for txn in data.get("transactions"):
+            if txn.get("alert") == "Debit":
+                total = total + float(txn.get("amount")[3:])
+            else:
+                continue
+        return total
+    else:
+        return "invalid phone number."
+    
+def get_txn_history(userphone, count=None):
+    if userphone.isdigit() and len(userphone) == 11:
+        headers = {'content-type':'application/json', 'x-access-token':f'{urgent2k_token}'}
+        url = f"{base_url}/api/v1/urgent2k/usertransaction/retrieve/{userphone}"
+
+        try:
+            #Make API call
+            r = requests.get(url=url, headers=headers)
+            print(f"Status code: {r.status_code}")  #Print status code
+            response = r.json()
+        except Exception as e:
+            return f"Encountered error: {e}"
+
+        if not response.get("status"):
+            return response.get("message")
+
+        data = response.get("data") 
+        transactions = data.get("transactions")
+
+        if count:
+            if count.isdigit():
+                int(count)
+                return transactions[:-abs(count):-1]
+            else:
+                return "count has to be a number"
+        else:
+            return transactions[::-1]
+
+    else:
+        return "invalid phone number."
+    
+
+
+
+
+#print(create("09015889838", "50"))
+#print(get_txn("08034335775"))
 #print(voucherdb.find_one({"token": "908891780559"})["status"])
 #create_voucher("09015889838", "50")
 #cash_voucher("07018168824", "908891780559")
 #wallets.insert_one({"userphone": "07018168824", "balance": 100.00})
 #print(credit("08034335775", "50","908891780559" ))
 #print(debit("08034335775", "50","908891780559"))
-#print(get_balance("07018l68824"))       
+#print(get_outflow("08034335775")) 
+#print(get_inflow("08034335775")) 
+print(get_txn_history("08034335775", 5))     

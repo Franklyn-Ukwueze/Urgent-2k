@@ -1,7 +1,13 @@
+import os
 import random
+import requests
 from flask import Flask, jsonify, request
 from flask_restful import Resource, Api, reqparse
 from app.helpers import get_balance, credit, debit, urgent2k_token_required, voucherdb
+
+urgent2k_token = os.environ.get("URGENT_2K_KEY")
+base_url = os.getenv("SAFEPAY_URL")
+
 
 # creating the flask app
 app = Flask(__name__)
@@ -143,3 +149,102 @@ class CashVoucher(Resource):
         else:
             return {"status": False, "message":"invalid phone number", "data": None}, 400       
 api.add_resource(CashVoucher, "/cashvoucher/<string:userphone>")
+
+class Inflow(Resource):
+    @urgent2k_token_required
+    def get(self, userphone):
+        if userphone.isdigit() and len(userphone) == 11:
+            headers = {'content-type':'application/json', 'x-access-token':f'{urgent2k_token}'}
+            url = f"{base_url}/api/v1/urgent2k/usertransaction/retrieve/{userphone}"
+
+            try:
+                #Make API call
+                r = requests.get(url=url, headers=headers)
+                print(f"Status code: {r.status_code}")  #Print status code
+                response = r.json()
+            except Exception as e:
+                return f"Encountered error: {e}"
+
+            if not response.get("status"):
+                return response.get("message")
+
+            data = response.get("data") 
+            
+            total = 0
+            for txn in data.get("transactions"):
+                if txn.get("alert") == "Credit":
+                    total = total + float(txn.get("amount")[3:])
+                else:
+                    continue
+            return {"status": True, "message":"Total outflow of this user has been retrieved successfully", "data": total }, 200
+        else:
+            return {"status": False, "message":"invalid phone number", "data": None}, 400
+api.add_resource(Inflow, "/inflow/<string:userphone>")
+
+class Outflow(Resource):
+    @urgent2k_token_required
+    def get(self, userphone):
+        if userphone.isdigit() and len(userphone) == 11:
+            headers = {'content-type':'application/json', 'x-access-token':f'{urgent2k_token}'}
+            url = f"{base_url}/api/v1/urgent2k/usertransaction/retrieve/{userphone}"
+
+            try:
+                #Make API call
+                r = requests.get(url=url, headers=headers)
+                print(f"Status code: {r.status_code}")  #Print status code
+                response = r.json()
+            except Exception as e:
+                return f"Encountered error: {e}"
+
+            if not response.get("status"):
+                return response.get("message")
+
+            data = response.get("data") 
+            
+            total = 0
+            for txn in data.get("transactions"):
+                if txn.get("alert") == "Credit":
+                    total = total + float(txn.get("amount")[3:])
+                else:
+                    continue
+            return {"status": True, "message":"Total inflow of this user has been retrieved successfully", "data": total }, 200
+        else:
+            return {"status": False, "message":"invalid phone number", "data": None}, 400
+api.add_resource(Outflow, "/outflow/<string:userphone>")
+
+class Txn_history(Resource):
+    @urgent2k_token_required
+    def get(self, userphone, count):
+        if userphone.isdigit() and len(userphone) == 11:
+            headers = {'content-type':'application/json', 'x-access-token':f'{urgent2k_token}'}
+            url = f"{base_url}/api/v1/urgent2k/usertransaction/retrieve/{userphone}"
+
+            try:
+                #Make API call
+                r = requests.get(url=url, headers=headers)
+                print(f"Status code: {r.status_code}")  #Print status code
+                response = r.json()
+            except Exception as e:
+                return f"Encountered error: {e}"
+
+            if not response.get("status"):
+                return response.get("message")
+
+            data = response.get("data") 
+            transactions = data.get("transactions")
+
+            if count:
+                if count.isdigit():
+                    int(count)
+                    return {"status": True, "message":"Transaction history of this user has been retrieved successfully", "data": transactions[:-abs(count):-1] }, 200
+                else:
+                    return {"status": True, "message": "count has to be a number", "data": None }, 400
+                
+            else:
+                return {"status": True, "message":"Transaction history of this user has been retrieved successfully", "data": transactions[::-1] }, 200
+
+        else:
+            {"status": False, "message":"invalid phone number", "data": None}, 400
+api.add_resource(Txn_history, "/txn_history/<string:userphone>/<string:count>")
+   
+
